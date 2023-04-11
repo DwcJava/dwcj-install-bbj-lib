@@ -66,7 +66,6 @@ public class PomParser {
         break;
       }
     }
-    System.out.println(configEntries.toString());
   }
 
   public String getConfiguration(String key) {
