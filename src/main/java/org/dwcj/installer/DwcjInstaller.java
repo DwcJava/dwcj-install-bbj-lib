@@ -296,13 +296,14 @@ public class DwcjInstaller {
     newApp.setBoolean(BBjAdminAppDeploymentApplication.DWC_ENABLED, true);
 
 
-    Boolean debug = pomParser.getConfiguration("debug").equals("true");
+    Boolean debug = pomParser.getConfiguration("debug") != null
+        && pomParser.getConfiguration("debug").equals("true");
     if (Boolean.TRUE.equals(debug)) {
       newApp.getArguments().add("DEBUG");
     }
 
     String classname = pomParser.getConfiguration("classname");
-    if (!classname.isEmpty()) {
+    if (classname != null && !classname.isEmpty()) {
       newApp.getArguments().add("class=" + classname);
     }
 
