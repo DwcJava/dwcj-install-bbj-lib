@@ -95,6 +95,7 @@ public class DwcjInstaller {
       dest.close();
       is.close();
     }
+    zip.close();
   }
 
   /**
@@ -143,6 +144,7 @@ public class DwcjInstaller {
       dest.close();
       is.close();
     }
+    zip.close();
   }
 
   private Set<String> getDwcjDeps(String dir) {
@@ -194,7 +196,18 @@ public class DwcjInstaller {
     new File(basedir).mkdirs();
 
     String zipFilePath = basedir + jarFileName;
-    Files.copy(Path.of(sourceFilePath), Path.of(zipFilePath), REPLACE_EXISTING);
+
+    try {
+      Files.copy(Path.of(sourceFilePath), Path.of(zipFilePath), REPLACE_EXISTING);
+    } catch (IOException e) {
+      String tmp = zipFilePath;
+      zipFilePath = basedir + String.valueOf(System.currentTimeMillis())+"_"+jarFileName;
+      out.append("WARNING: "+tmp+" was locked!\n");
+      Files.copy(Path.of(sourceFilePath), Path.of(zipFilePath), REPLACE_EXISTING);
+      out.append("WARNING: Using "+zipFilePath+" instead.\n");
+      new File(tmp).deleteOnExit();
+    }
+
 
     String pomFile = basedir + POM_XML;
 
