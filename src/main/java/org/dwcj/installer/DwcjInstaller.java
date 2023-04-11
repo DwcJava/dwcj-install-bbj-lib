@@ -12,9 +12,11 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +46,7 @@ public class DwcjInstaller {
 
   //buffer size
   public static final int BUFFER = 2048;
-  public static final String TARGET_DEPENDENCY = "target/dependency/";
+
   public static final String POM_XML = "pom.xml";
 
   //a central StringBuilder instance to obtain the log
@@ -57,8 +59,9 @@ public class DwcjInstaller {
    * @param zipFile the project's jar
    * @throws IOException  when io fails.
    */
-  private void unzipPom(String zipFile) throws IOException {
+  private String unzipPom(String zipFile) throws IOException {
 
+    String checksum="";
     out.append("dwcj-installer: extracting pom.xml\n");
 
     File file = new File(zipFile);
@@ -96,6 +99,16 @@ public class DwcjInstaller {
       is.close();
     }
     zip.close();
+
+    try {
+      byte[] data = Files.readAllBytes(Paths.get(directory+"/"+POM_XML));
+      byte[] hash = new byte[0];
+      hash = MessageDigest.getInstance("MD5").digest(data);
+      checksum = new BigInteger(1, hash).toString(16);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+    return checksum;
   }
 
   /**
@@ -106,7 +119,6 @@ public class DwcjInstaller {
    * @throws IOException  an exception with IO.
    */
   private void unzipBbjProgs(String zipFile, String directory) throws IOException {
-
     File file = new File(zipFile);
     ZipFile zip = new ZipFile(file);
     Enumeration<? extends ZipEntry> zipFileEntries = zip.entries();
@@ -210,33 +222,30 @@ public class DwcjInstaller {
 
 
     String pomFile = basedir + POM_XML;
+    String checksum = unzipPom(zipFilePath);
 
-
-    unzipPom(zipFilePath);
-    File depdir = new File(basedir + TARGET_DEPENDENCY);
+    String targetDependency = "target/dependency/";
+    File depdir = new File(basedir + checksum+"/"+targetDependency);
     if (depdir.exists()) {
-      deleteDirectory(depdir);
+      out.append("dwcj-installer: pom.xml not changed. No need to run Maven.\n");
+    } else {
+      InvocationRequest request = new DefaultInvocationRequest();
+      request.setPomFile(new File(pomFile));
+      request.setGoals(Collections.singletonList("dependency:copy-dependencies -DoutputDirectory="+depdir));
+      Invoker invoker = new DefaultInvoker();
+      invoker.setOutputHandler(new MavenOutputHandler(out));
+      invoker.setErrorHandler(new MavenOutputHandler(out));
+
+      String mvn = MavenBinaryInstaller.getMavenBinary(deployroot);
+      invoker.setMavenHome(new File(mvn));
+
+      invoker.execute(request);
     }
 
-    InvocationRequest request = new DefaultInvocationRequest();
-    request.setPomFile(new File(pomFile));
-    request.setGoals(Collections.singletonList("dependency:copy-dependencies"));
-    Invoker invoker = new DefaultInvoker();
-    invoker.setOutputHandler(new MavenOutputHandler(out));
-    invoker.setErrorHandler(new MavenOutputHandler(out));
-
-    String mvn = MavenBinaryInstaller.getMavenBinary(deployroot);
-    invoker.setMavenHome(new File(mvn));
-
-    invoker.execute(request);
-
-    //String engine = getEngine("/Users/beff/mvntesting/target/dependency/");
-    //System.out.println(engine.toString());
-
-    Set<String> deps = getDwcjDeps(basedir + TARGET_DEPENDENCY);
+    Set<String> deps = getDwcjDeps(depdir.getAbsolutePath());
     Iterator<String> it = deps.iterator();
     while (it.hasNext()) {
-      unzipBbjProgs(basedir + TARGET_DEPENDENCY + it.next(), basedir);
+      unzipBbjProgs(depdir.getAbsolutePath() + "/" + it.next(), basedir);
     }
 
     PomParser pomParser = new PomParser(pomFile);
@@ -266,7 +275,7 @@ public class DwcjInstaller {
     //create BBj classpath
     ArrayList<String> cpEntries = new ArrayList<>();
     cpEntries.add("(bbj_default)");
-    cpEntries.add(basedir + "target/dependency/*");
+    cpEntries.add(depdir.getAbsolutePath() + "/*");
     cpEntries.add(zipFilePath);
 
     String apphandle = "dwcj_" + appname.toLowerCase();
@@ -328,4 +337,5 @@ public class DwcjInstaller {
     newApp.commit();
     return out.toString();
   }
+
 }
