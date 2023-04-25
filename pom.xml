@@ -6,7 +6,7 @@
 
     <groupId>org.dwcj</groupId>
     <artifactId>dwcj-install-bbj-lib</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
