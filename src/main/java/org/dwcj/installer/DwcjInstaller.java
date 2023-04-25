@@ -245,7 +245,10 @@ public class DwcjInstaller {
     Set<String> deps = getDwcjDeps(depdir.getAbsolutePath());
     Iterator<String> it = deps.iterator();
     while (it.hasNext()) {
-      unzipBbjProgs(depdir.getAbsolutePath() + "/" + it.next(), basedir);
+      String nextFile = it.next();
+      if (nextFile.toLowerCase().endsWith(".jar")) {
+        unzipBbjProgs(depdir.getAbsolutePath() + "/" + nextFile, basedir);
+      }
     }
 
     PomParser pomParser = new PomParser(pomFile);
