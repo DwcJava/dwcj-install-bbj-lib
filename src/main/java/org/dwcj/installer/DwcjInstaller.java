@@ -203,7 +203,7 @@ public class DwcjInstaller {
       throws MavenInvocationException, IOException, BBjAdminException,
       ParserConfigurationException, SAXException, NoSuchAlgorithmException {
 
-    String basedir = deployroot + jarFileName.substring(0, jarFileName.indexOf(".")) + "/";
+    String basedir = deployroot + jarFileName.substring(0, jarFileName.toLowerCase().indexOf(".jar")) + "/";
 
     new File(basedir).mkdirs();
 
@@ -245,6 +245,7 @@ public class DwcjInstaller {
     Set<String> deps = getDwcjDeps(depdir.getAbsolutePath());
     Iterator<String> it = deps.iterator();
     while (it.hasNext()) {
+
       String nextFile = it.next();
       if (nextFile.toLowerCase().endsWith(".jar")) {
         unzipBbjProgs(depdir.getAbsolutePath() + "/" + nextFile, basedir);
@@ -255,7 +256,7 @@ public class DwcjInstaller {
     String appname = pomParser.getConfiguration("publishname");
 
     if (appname == null) {
-      appname = jarFileName.substring(0, jarFileName.indexOf("."));
+      appname = jarFileName.substring(0, jarFileName.toLowerCase().indexOf(".jar"));
     }
     String user = pomParser.getConfiguration("username");
     if (user == null) {
